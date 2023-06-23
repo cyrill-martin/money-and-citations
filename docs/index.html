@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Does Money Buy Citations?</title>
+  <meta name="description" content="This exploration examines the relationship between the level of funding received by research grants and the
+  number of citations received by their scientific publications.">
+  <meta name="keywords" content="Research, Grants, Publications, Funding, Citations">
+  <meta name="author" content="Cyrill Martin">
+  <link rel="stylesheet" href="simplest-grid.css">
+  <style>
+    h1 {
+      font-size: 24px;
+      margin: 0.5rem 0 0 0;
+    }
+
+    .dd-label {
+      display: inline-block;
+      width: 65px;
+      text-align: left;
+    }
+
+    select {
+      width: 200px;
+      height: 26px;
+      font-size: 13px;
+      border: 1px solid lightgrey;
+      border-radius: 5px;
+      margin: 0 0 5px 0;
+    }
+
+    input[type='checkbox'] {
+      margin-left: 10px;
+    }
+
+    .notSelectedStory {
+      padding: 0 0 0 5px;
+      border-radius: 5px;
+      margin: 8px 0 0 0;
+      cursor: pointer;
+      background-color: rgb(240, 240, 240);
+      border: 1px solid rgb(240, 240, 240);
+    }
+
+    .notSelectedStory:hover {
+      background-color: rgb(219, 219, 219);
+      border: 1px solid rgb(219, 219, 219);
+    }
+
+    .selectedStory {
+      padding: 0 0 0 5px;
+      border-radius: 5px 5px 0 0;
+      margin: 8px 0 0 0;
+      cursor: pointer;
+      background-color: lightgrey;
+      border: 1px solid lightgrey;
+      font-weight: bold;
+    }
+
+    .story-action {
+      font-weight: bold;
+      color: #1078e7;
+      cursor: pointer;
+    }
+
+    .story-text {
+      font-size: 13px;
+      border-left: 1px solid lightgrey;
+      border-right: 1px solid lightgrey;
+      border-bottom: 1px solid lightgrey;
+      padding: 5px;
+      border-radius: 0 0 5px 5px;
+    }
+
+    .story-text>p {
+      margin: 0 0 0.25rem 0;
+    }
+
+    .story-text>h4 {
+      margin: 0.25rem 0 0 0;
+    }
+
+    .legend-item {
+      cursor: pointer;
+    }
+
+    #footer {
+      margin-top: 50px;
+      min-height: 200px;
+      background-color: rgb(240, 240, 240);
+      font-size: 13px;
+      color: #888888;
+    }
+
+    table {
+      border-collapse: collapse;
+    }
+
+    table,
+    th,
+    td {
+      border: none;
+    }
+
+    td:first-child {
+      white-space: nowrap;
+      padding: 0 2rem 0.5rem 0;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Import Maps API -->
+  <script type="importmap">
+    {
+      "imports": {
+        "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
+        "d3": "https://cdn.skypack.dev/d3@7.1.1"
+      }
+    }
+  </script>
+
+  <!-- Vue template -->
+  <div v-if="dataset" class="container" id="app">
+    <div class="row">
+      <div v-if="dataset" class="col-10" id="intro">
+        <h1>Does Money Buy Citations?</h1>
+        <p>
+          This exploration examines the relationship between the level of funding received by biomedical research grants
+          and the number of citations received by their scientific publications. The study focuses on
+          {{dataset.length.toLocaleString('en-US')}} biomedical research grants supported by the Swiss National Science
+          Foundation (SNSF), with funds granted between 2012 and 2022.
+        </p>
+        <p>The dataset is
+          consolidated from the <a href="https://data.snf.ch/datasets" target="_blank">SNSF data portal</a>, and the
+          number of citations for each publication associated with the
+          grants has been obtained using the <a href="https://www.crossref.org/documentation/cited-by/retrieve-citations/"
+            target="_blank">CrossRef cited-by API</a> (as of May 15, 2023). To address the potential influence
+          of
+          grant
+          duration on the total number of publications and funding received, the analysis focuses primarily on two
+          factors: the grant's average annual funding amount and the average number of citations received by their
+          publications.
+        </p>
+        <p>You can follow along with the numbered sections below, which will guide you through some key findings. Click
+          on the blue text or the section titles themselves to see changes in the chart. The fifth section allows you to
+          visually explore the entire dataset independently.</p>
+        <p> For more information about the dataset, please refer to the footer.</p>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="row">
+      <!-- The story selection -->
+      <div class="col-4">
+
+        <div :class="isSelectedStory('0') ? 'selectedStory' : 'notSelectedStory'" @click="setChart('0')"
+          v-html="storyTitles['0']"></div>
+        <div v-if="selectedStory === '0' && dataset" class="story-text">
+          <p> The grants are categorized based
+            on the <b>funding scheme</b> through which they were awarded.</p>
+          <p> Each grant is also associated with a specific
+            <span class="story-action" @click="groupBy = 'MainDiscipline_Level2'">research area</span> within the
+            broader field of medicine.
+          </p>
+          <p> While each grant's <span class="story-action" @click="groupBy = 'CallDecisionYear'">call decision
+              year</span> was not taken into account for the analysis,
+            it is evident that the number of completed grants
+            decreases as the years approach the year of the exploration (2023).</p>
+          <p>
+            <span class="story-action" @click="setChart('1')">Next</span>, let's examine the financial aspect.
+          </p>
+        </div>
+
+        <div :class="isSelectedStory('1') ? 'selectedStory' : 'notSelectedStory'" @click="setChart('1')"
+          v-html="storyTitles['1']"></div>
+        <div v-if="selectedStory === '1'" class="story-text">
+          <p>
+            The chart displays the average funding amount per year compared to the average number of citations received
+            per publication for each grant. Due to heavy skewness in the data, we apply log-transformation to both the
+            <span class="story-action" @click="xLog = true">x-axis</span> and the <span class="story-action"
+              @click="yLog = true">y-axis</span>. However, even after log-transformation, no evident relationship
+            emerges between the funding amount and the number of citations per grant.
+          </p>
+          <p><span class="story-action" @click="setChart('2')">Next</span>, let's examine a key factor that
+            significantly influences the number of citations.
+          </p>
+        </div>
+
+        <div :class="isSelectedStory('2') ? 'selectedStory' : 'notSelectedStory'" @click="setChart('2')"
+          v-html="storyTitles['2']"></div>
+        <div v-if="selectedStory === '2'" class="story-text">
+          <p>
+            The only noticeable relationship is observed between the average number of papers published per year and the
+            total number of citations received. It is evident that as the number of papers per year increases, the total
+            citations also tend to increase, assuming the papers are cited.
+          </p>
+          <p>
+            The linear model used in this analysis explains only 39% of the variability observed in the data.
+            The model shows further improvement when incorporating the log-transformed amount per year and the
+            categorical variable of research area. However, there is evidence for heteroscedasticity, which suggests a
+            violation of the underlying assumptions of the regression model. In this context, it may be more appropriate
+            to consider regression modeling for grants that are more comparable within the same category. E.g. grants
+            from the "Programmes" funding scheme.</p>
+          <p>
+            By examining grants with the highest citation counts (above 8 on the log-transformed y-axis), it becomes
+            evident that a majority of them fall under the categories of "Projects". Alternatively, when looking at the
+            <span class="story-action" @click="setChart('2.1')">research areas</span>, the prominent ones are
+            "Experimental
+            Medicine" and "Basic Medical Science".
+          </p>
+          <p>
+            In the <span class="story-action" @click="setChart('3')">next</span> section, we will delve deeper into an
+            analysis of the categories in general.
+          </p>
+        </div>
+
+        <div :class="isSelectedStory('3') ? 'selectedStory' : 'notSelectedStory'" @click="setChart('3')"
+          v-html="storyTitles['3']"></div>
+        <div v-if="selectedStory === '3'" class="story-text">
+          <p>
+            The chart shows the average citations per publication, categorized by the research area of the grant.
+            Variances across the groups were found to be homogeneous. An analysis
+            of variance confirmed that grants in "Experimental Medicine" and "Basic Medical Science" receive
+            significantly more citations per publication. The difference between these
+            groups is also statistically significant.
+          </p>
+          <p>
+            Upon closer examination of the <span class="story-action" @click="setChart('3.1')">funding received</span>,
+            it becomes apparent that grants categorized under "Experimental Medicine" receive significantly higher
+            funding compared to other groups.
+          </p>
+          <h4>Conclusion</h4>
+          <p>The main driving factor for <span class="story-action" @click="setChart('3')">citations</span> appears to
+            be the area of the research. The relationship
+            between the higher number of average citations per publication in "Experimental Medicine" and the higher
+            amount of funding received in this research area remains uncertain. It is possible that conducting research
+            in
+            this field is simply more expensive. Further analysis is needed.
+          </p>
+        </div>
+
+        <div :class="isSelectedStory('100') ? 'selectedStory' : 'notSelectedStory'" @click="setChart('100')"
+          v-html="storyTitles['100']"></div>
+        <div v-if="selectedStory === '100'" class="story-text">
+          <p>
+            Feel free to customize the settings according to your preferences. You have access to all columns of the
+            underlying dataset for further exploration. If applicable, you can utilize log-transformation of the data.
+          </p>
+          <p>
+            However, it is important to keep in mind that relying solely on data visualization without conducting a
+            thorough analysis of the underlying numerical data may not provide a complete representation of the
+            statistical truth.
+          </p>
+          <p><b>Tip</b>: Click on any grant dot to open its corresponding page on the SNSF data portal.</p>
+        </div>
+      </div>
+
+      <div class="col-8">
+        <!-- The selection elements -->
+        <div class="row">
+          <div class="col-12">
+            <!-- x-Axis dropdwon -->
+            <label class="dd-label" for="x-variable">x-Axis</label>
+            <select v-if="dataset" name="x-variable" id="x-variable" v-model="xVariable" :disabled="isReadonly">
+              <option v-for="(option, index) in xSelect" :id="index" :value="option">{{ labels.en[option] }}</option>
+            </select>
+
+            <!-- x log-transformation -->
+            <span v-if="!noLog.includes(xVariable)">
+              <input type="checkbox" id="x-log-cb" v-model="xLog" :disabled="isReadonly">
+              <label class="cb-label" for="x-log-cb">log-transformed</label>
+            </span>
+
+            <!-- Means per group on the x-axis -->
+            <span v-else-if="groups.includes(xVariable)">
+              <input type="checkbox" id="group-means" v-model="showMeans" :disabled="isReadonly">
+              <label class="cb-label" for="group-means">Show means</label>
+            </span>
+            <br>
+
+            <!-- x-Axis dropdown -->
+            <label class="dd-label" for="y-variable">y-Axis</label>
+            <select v-if="dataset" name="y-variable" id="y-variable" v-model="yVariable" :disabled="isReadonly">
+              <option v-for="(option, index) in ySelect" :id="index" :value="option">{{ labels.en[option] }}</option>
+            </select>
+
+            <!-- y log-transformation -->
+            <span v-if="!noLog.includes(yVariable)">
+              <input type="checkbox" id="y-log-cb" v-model="yLog" :disabled="isReadonly">
+              <label class="cb-label" for="y-log-cb">log-transformed</label>
+            </span>
+            <br>
+
+            <!-- Group -->
+            <label class="dd-label" for="group">Color</label>
+            <select v-if="dataset" name="group" id="group" v-model="groupBy" :disabled="isReadonly">
+              <option v-for="(option, index) in groups" :id="index" :value="option">{{ labels.en[option] }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <div id="chart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" id="footer">
+      <div class="col-10">
+        <p>The dataset creation, analysis, and visualization were conducted as part of my Certificate
+          of Advanced
+          Studies in Statistical Data Analysis and Data Visualization at the Swiss Distance University of Applied
+          Sciences.<br>
+          The Swiss National Science Foundation (SNSF) has neither verified nor confirmed any of the
+          presented
+          results.<br>
+          The grant data complies with the <a href="https://data.snf.ch/about/open-data-policy" target="_blank">open
+            data policy</a> of the SNSF.</p>
+
+        <p>All the code utilized for data creation, analysis, and visualization is available on <a href="" target="_blank">GitHub</a>.</p>
+
+        <p>
+        <h4>Glossary</h4>
+        <table>
+          <tbody>
+            <tr>
+              <td><b>Call decision year:</b></td>
+              <td>The call decision year is the year in which decisions on most grants of a call are made. It normally
+                means the year in which a grant was approved.</td>
+            </tr>
+            <tr>
+              <td><b>Research area:</b></td>
+              <td>Research area of the main discipline of an application. See <a
+                  href="https://data.snf.ch/about/glossary" target="_blank">Glossary</a> for more details.</td>
+            </tr>
+            <tr>
+              <td><b>Funding scheme:</b></td>
+              <td>For funding purposes, the SNSF distinguishes between different funding schemes. See <a
+                  href="https://www.snf.ch/en/9o5ezhuSlHENVQxr/page/overview-of-funding-schemes"
+                  target="_blank">Overview of Funding Schemes</a> for more details.</td>
+            </tr>
+            <tr>
+              <td><b>Duration (Years):</b></td>
+              <td>The grant's duration in years.</td>
+            </tr>
+            <tr>
+              <td><b>Total amount granted (CHF):</b></td>
+              <td>Approved amount, changed if the award is corrected.</td>
+            </tr>
+            <tr>
+              <td><b>Amount per year (CHF):</b></td>
+              <td>Average amount granted per year.</td>
+            </tr>
+            <tr>
+              <td><b>Informal outputs:</b></td>
+              <td>The total number of outputs that are not peer-reviewed publications. It includes use-inspired
+                outputs,
+                public communications, academic events, awards, datasets, and knowledge transfer events.</td>
+            </tr>
+            <tr>
+              <td><b>Informal outputs per year:</b></td>
+              <td>The average number of informal outputs per year.</td>
+            </tr>
+            <tr>
+              <td><b>Publications:</b></td>
+              <td>The total number of peer-reviewed publications with a DOI as given in the SNSF data.</td>
+            </tr>
+            <tr>
+              <td><b>Publications per year:</b></td>
+              <td>The average number of publications per year.</td>
+            </tr>
+            <tr>
+              <td><b>Citations:</b></td>
+              <td>The total number of citations received by all publications of a grant. As avaialble through CrossRef
+                on May 15, 2023.</td>
+            </tr>
+            <tr>
+              <td><b>Citations per publication:</b></td>
+              <td>The average number of citations per publications. As of May 15, 2023.</td>
+            </tr>
+          </tbody>
+        </table>
+        </p>
+
+        <p>Cyrill Martin<br>
+          <a href="mailto:cyrill.martin@kmapper.com">cyrill.martin@kmapper.com</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- simple-statistics is not importmap-ready -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-statistics/7.8.3/simple-statistics.min.js"></script>
+
+  <!-- Vue.js -->
+  <script type="module">
+    import * as d3 from "d3";
+    import { createApp } from "vue";
+
+    const app = createApp({
+      data() {
+        return {
+          // Data
+          dataFile: "BiomedGrants_20230601.csv",
+          dataset: null,
+          ratios: null,
+          meanData: null,
+          // Settings
+          xSelect: [
+            "CallDecisionYear",
+            "MainDiscipline_Level2",
+            "FundingInstrumentLevel1",
+            //
+            "GrantDurationYears",
+            "AmountGrantedAllSets",
+            "AmountPerYear",
+            "NrTotalUncitableOutputs",
+            "NrTotalUncitableOutputsPerYear",
+            "NrCitablePublications",
+            "NrCitablePublicationsPerYear",
+            "NrCitationsTotal",
+            "NrCitationsPerPublication"
+          ],
+          ySelect: [
+            "GrantDurationYears",
+            "AmountGrantedAllSets",
+            "AmountPerYear",
+            "NrTotalUncitableOutputs",
+            "NrTotalUncitableOutputsPerYear",
+            "NrCitablePublications",
+            "NrCitablePublicationsPerYear",
+            "NrCitationsTotal",
+            "NrCitationsPerPublication"
+          ],
+          groups: [
+            "FundingInstrumentLevel1",
+            "MainDiscipline_Level2",
+            "CallDecisionYear"],
+          noLog: [
+            " ",
+            "AmountGrantedAllSets",
+            "FundingInstrumentLevel1",
+            "MainDiscipline_Level2",
+            "CallDecisionYear",
+            "GrantDurationYears"
+          ],
+          xVariable: " ", // Pre-set
+          xAccessorLabel: null,
+          yVariable: " ", // Pre-set
+          yAccessorLabel: null,
+          xLog: false,
+          yLog: false,
+          groupBy: "FundingInstrumentLevel1", // Pre-set
+          showMeans: false,
+          labels: {
+            "en": {
+              " ": " ",
+              "CallDecisionYear": "Call decision year",
+              "MainDiscipline_Level2": "Research area",
+              "FundingInstrumentLevel1": "Funding scheme",
+              "GrantDurationYears": "Duration (Years)",
+              "AmountGrantedAllSets": "Total amount granted (CHF)",
+              "AmountPerYear": "Amount per year (CHF)",
+              "NrTotalUncitableOutputs": "Informal outputs",
+              "NrTotalUncitableOutputsPerYear": "Informal outputs per year",
+              "NrCitablePublications": "Publications",
+              "NrCitablePublicationsPerYear": "Publications per year",
+              "NrCitationsTotal": "Citations",
+              "NrCitationsPerPublication": "Citations per publication"
+            }
+          },
+          // Chart
+          svg: null,
+          ctr: null,
+          xAxisGroup: null,
+          xScale: null,
+          yAxisGroup: null,
+          yScale: null,
+          dimensions: {
+            width: 1400,
+            height: 700,
+            margin: {
+              top: 50,
+              bottom: 80,
+              left: 80,
+              right: 310,
+            }
+          },
+          dotOpacity: 0.5,
+          grantDotRadius: 8,
+          uniqueGroups: null,
+          tranDur: 2500,
+          fontSize: 18,
+          // Template
+          selectedStory: "0",
+          storyTitles: {
+            "0": "1. Examining the Grants: the Data",
+            "1": "2. Investigating the Link: Money and Citations",
+            "2": "3. Delving Deeper: Factors for Citations",
+            "3": "4. Exploring Research Areas: Differences in Citations and Funding",
+            "100": "5. Raising Questions: Visualize on Your Own"
+          },
+          chartSettings: {
+            "0": {
+              xVariable: " ",
+              xLog: false,
+              yVariable: " ",
+              yLog: false,
+              groupBy: "FundingInstrumentLevel1",
+              showMeans: false,
+            },
+            "1": {
+              xVariable: "AmountPerYear",
+              xLog: false,
+              yVariable: "NrCitationsPerPublication",
+              yLog: false,
+              groupBy: "MainDiscipline_Level2",
+              showMeans: false,
+            },
+            "2": {
+              xVariable: "NrCitablePublicationsPerYear",
+              xLog: true,
+              yVariable: "NrCitationsTotal",
+              yLog: true,
+              groupBy: "FundingInstrumentLevel1",
+              showMeans: false,
+            },
+            "2.1": {
+              xVariable: "NrCitablePublicationsPerYear",
+              xLog: true,
+              yVariable: "NrCitationsTotal",
+              yLog: true,
+              groupBy: "MainDiscipline_Level2",
+              showMeans: false,
+            },
+            "3": {
+              xVariable: "MainDiscipline_Level2",
+              xLog: false,
+              yVariable: "NrCitationsPerPublication",
+              yLog: true,
+              groupBy: "MainDiscipline_Level2",
+              showMeans: true,
+            },
+            "3.1": {
+              xVariable: "MainDiscipline_Level2",
+              xLog: false,
+              yVariable: "AmountPerYear",
+              yLog: true,
+              groupBy: "MainDiscipline_Level2",
+              showMeans: true,
+            },
+            "3.2": {
+              xVariable: "FundingInstrumentLevel1",
+              xLog: false,
+              yVariable: "NrCitablePublicationsPerYear",
+              yLog: true,
+              groupBy: "FundingInstrumentLevel1",
+              showMeans: true,
+            }
+          }
+        }
+      },
+      computed: {
+        isReadonly() {
+          return this.selectedStory === "100" ? false : true;
+        }
+      },
+      async mounted() {
+        await this.loadData();
+        await this.initGroupIndices();
+        console.log(this.dataset);
+        await this.initSvg();
+        this.drawChart();
+      },
+      watch: {
+        xLog() {
+          this.drawChart();
+        },
+        yLog() {
+          this.drawChart();
+        },
+        xVariable(newValue) {
+          if (this.noLog.includes(newValue)) {
+            this.xLog = false;
+          }
+          if (!this.groups.includes(newValue)) {
+            this.showMeans = false;
+          }
+          this.drawChart();
+        },
+        yVariable(newValue) {
+          if (this.noLog.includes(newValue)) {
+            this.yLog = false;
+          }
+          this.drawChart();
+        },
+        groupBy() {
+          d3.selectAll("circle").style("visibility", "visible");
+          this.drawChart({ updateMeans: false });
+        },
+        showMeans(newValue) {
+          this.drawChart();
+          if (newValue === false) {
+            this.removeMeanLines();
+          }
+        }
+        // selectedStory(newValue) {
+        //   if (newValue === "2" || newValue == "2.1") {
+        //     this.plotRegressionLine();
+        //   } else {
+        //     this.removeRegressionLine();
+        //   }
+        // }
+      },
+      methods: {
+        async loadData() {
+          this.dataset = await d3.csv(this.dataFile, d3.autoType);
+        },
+        async initGroupIndices() {
+          // Add relevant indices for each group to be able to re-group initially shown grants (!)
+          this.groups.forEach((group) => {
+            // Sort by group
+            this.dataset = this.dataset.sort((a, b) => d3.descending(a[group], b[group]));
+            // Add group-specific index
+            this.dataset = this.dataset.map((grant, i) => {
+              return { ...grant, [`${group}_i`]: i };
+            });
+          });
+        },
+        isSelectedStory(n) {
+          if (n === this.selectedStory) {
+            return true;
+          }
+        },
+        async initSvg() {
+          // Add a width for the up to come container inside the up to come svg image
+          this.dimensions.ctrWidth = this.dimensions.width - (this.dimensions.margin.left + this.dimensions.margin.right);
+
+          // Add a height for the up to come container inside the up to come svg image
+          this.dimensions.ctrHeight = this.dimensions.height - (this.dimensions.margin.top + this.dimensions.margin.bottom);
+
+          // Draw <svg> canvas
+          this.svg = d3
+            .select("#chart")
+            .append("svg")
+            .attr("id", "svg-chart")
+            .attr("viewBox", `0 0 ${this.dimensions.width} ${this.dimensions.height}`);
+
+          // Add <g> container with margins
+          this.ctr = this.svg
+            .append("g")
+            .attr(
+              "transform",
+              `translate(${this.dimensions.margin.left}, ${this.dimensions.margin.top})`
+            );
+
+          // x-axis group
+          this.xAxisGroup = this.ctr
+            .append("g")
+            .classed("axis", true) // Makes sure the axis gets always rendered crisp
+            .attr("id", "x-axis-label")
+            .attr("transform", `translate(0, ${this.dimensions.ctrHeight})`)
+            .style("font-size", this.fontSize);
+
+          // Refine x-axis
+          this.xAxisGroup
+            .append("text")
+            .attr("x", this.dimensions.ctrWidth / 2)
+            .attr("y", this.dimensions.margin.bottom - 20)
+            .attr("fill", "black")
+            .text(""); // Update later
+
+          // y-axis group
+          this.yAxisGroup = this.ctr
+            .append("g")
+            .classed("axis", true)
+            .attr("id", "y-axis-label")
+            .style("font-size", this.fontSize);
+
+          // Refine y-axis
+          this.yAxisGroup
+            .append("text")
+            .attr("x", -this.dimensions.ctrHeight / 2)
+            .attr("y", -this.dimensions.margin.left + 15)
+            .style("transform", "rotate(270deg)")
+            .attr("text-anchor", "middle")
+            .attr("fill", "black")
+            .text(""); // Update later
+
+          this.ctr
+            .append("g")
+            .attr("id", "excluded-title")
+            .style("display", "none")
+            .attr("transform", `translate(${this.dimensions.ctrWidth + 25}, ${this.dimensions.ctrHeight - 25})`)
+            .style("font-size", this.fontSize * 0.9)
+            .style("fill", "grey")
+            // .style("font-weight", "bold")
+            .append("text")
+            .attr("text-anchor", "start")
+            .text(""); //Update later
+        },
+        async drawChart(updateMeans = true) {
+
+          // Colors
+          const colorAccessor = (index) => {
+            const colorSchemes = {
+              FundingInstrumentLevel1: ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"],
+              MainDiscipline_Level2: ["#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"],
+              CallDecisionYear: ["#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928"]
+            };
+            return colorSchemes[this.groupBy][index % colorSchemes[this.groupBy].length];
+          };
+
+          // Function to plot the data (called below)
+          const plotData = async (params) => {
+
+            this.uniqueGroups = [...new Set(this.dataset.map(grant => grant[params.groupBy]))].sort();
+
+            // Accessors
+            const xAccessor = (d) => d[params.xAccessorLabel];
+            const yAccessor = (d) => d[params.yAccessorLabel];
+
+            // Calculating the numbers for the initial waffle chart
+            const actualWidth = this.dimensions.width - (this.dimensions.margin.left + this.dimensions.margin.right);
+            const actualHeight = this.dimensions.height - (this.dimensions.margin.top + this.dimensions.margin.bottom);
+            // The max number of dots across the actually available widtd
+            const grantsPerRow = Math.ceil(actualWidth / (this.grantDotRadius * 2));
+            // The number of rows based on the number of dots per row
+            const totalRows = Math.ceil(this.dataset.length / grantsPerRow);
+
+            // Scales
+            if (!this.groups.includes(params.xVariable)) {
+              // Linear scale if not categorial
+              this.xScale = d3
+                .scaleLinear()
+                .domain(params.xVariable === " " ? [0, grantsPerRow] : d3.extent(this.dataset, xAccessor))
+                .range([0, this.dimensions.ctrWidth])
+                .nice(); // Round the domain values
+            } else {
+              // Scale bands for categories
+              this.xScale = d3
+                .scaleBand()
+                .domain([...new Set(this.dataset.map(grant => grant[params.xVariable]))].sort()) // Can't be this.uniqueGroups <-- is the groupBy color
+                .align(0.5)
+                .range([0, this.dimensions.ctrWidth]);
+            }
+
+            this.yScale = d3
+              .scaleLinear()
+              .domain(params.yVariable === " " ? [0, totalRows] : d3.extent(this.dataset, yAccessor))
+              .range([this.dimensions.ctrHeight, 0])
+              .nice();
+
+            // x axis
+            const xAxisTickFormat = () => {
+              if (this.groups.includes(params.xVariable)) {
+                return null;
+              } else if (["AmountGrantedAllSets", "AmountPerYear"].includes(params.xVariable) && !this.xLog) {
+                return d3.format(".2s");
+              } else {
+                return d3.format(",");
+              }
+            };
+
+            const xAxis = d3
+              .axisBottom(this.xScale)
+              .tickFormat(xAxisTickFormat())
+              .tickValues(params.xVariable === " " ? [] : null)
+              .ticks() // ticks() is considered a recommendation by D3.js
+
+            // Place the axis
+            this.xAxisGroup
+              .transition()
+              .call(xAxis);
+
+            // Display the x-axis label
+
+            let xAxisLabel;
+
+            if (this.yVariable !== " ") {
+              xAxisLabel = this.xLog ? `log(${this.labels.en[params.xVariable]})` : this.labels.en[params.xVariable];
+            } else {
+              xAxisLabel = `${d3.format(",")(this.dataset.length)} completed research grants`;
+            };
+
+            d3.select("#x-axis-label")
+              .select("text")
+              .text(xAxisLabel);
+
+            // y axis
+            const yAxisTickFormat = () => {
+              if (["AmountGrantedAllSets", "AmountPerYear"].includes(params.yVariable) && !this.yLog) {
+                return d3.format(".2s");
+              } else {
+                return d3.format(",");
+              }
+            };
+
+            const yAxis = d3
+              .axisLeft(this.yScale)
+              .tickFormat(yAxisTickFormat())
+              .tickValues(params.yVariable === " " ? [] : null)
+              .ticks();
+
+            this.yAxisGroup
+              .transition()
+              .call(yAxis);
+
+            // Display the y-axis label
+            d3.select("#y-axis-label")
+              .select("text")
+              .text(this.yLog ? `log(${this.labels.en[params.yVariable]})` : this.labels.en[params.yVariable]);
+
+            const bandwithJitter = () => {
+              return (this.xScale.bandwidth() / 2) * (Math.random() * 2 - 1) * 0.6;
+            };
+
+            const excludedJitter = () => {
+              return Math.random() * 260;
+            };
+
+            let excludedGrants = new Set();
+
+            // The dots of the plot
+            this.ctr
+              .selectAll("circle")
+              .data(this.dataset)
+              .join(
+                (enter) =>
+                  enter
+                    .append("a")
+                    .attr("xlink:href", (d) => `https://data.snf.ch/grants/grant/${d.GrantNumber}`)
+                    .attr("target", "_blank")
+                    .append("circle")
+                    .attr("class", (d) => `cat_${d.FundingInstrumentLevel1.replace(/\s/g, "")} cat_${d.MainDiscipline_Level2.replace(/\s/g, "")} cat_${d.CallDecisionYear}`)
+                    .style("visibility", "visible")
+                    .attr("cx", (d) => this.xScale((d[`${params.groupBy}_i`] % grantsPerRow) + 1))
+                    .attr("cy", 0)
+                    .attr("r", this.grantDotRadius)
+                    .style("stroke", (d) => colorAccessor(this.uniqueGroups.indexOf(d[params.groupBy])))
+                    .attr("fill", (d) => colorAccessor(this.uniqueGroups.indexOf(d[params.groupBy])))
+                    .attr("fill-opacity", this.dotOpacity)
+              )
+              .transition()
+              .duration(this.tranDur)
+              .attr("cx", (d) => {
+
+                if (params.xVariable === " ") {
+                  return this.xScale((d[`${params.groupBy}_i`] % grantsPerRow) + 1);
+                }
+
+                if (xAccessor(d) !== null && yAccessor(d) !== null) {
+                  // If variable is 0, it becomes null when doing the log-transformation
+                  if (!this.groups.includes(params.xVariable)) {
+                    return this.xScale(xAccessor(d));
+                  } else {
+                    return this.xScale(d[params.xVariable]) + this.xScale.bandwidth() / 2 + bandwithJitter();
+                  }
+                } else { // This handles the nulls after log-transformation
+                  excludedGrants.add(d.GrantNumber);
+                  if (!this.groups.includes(params.xVariable)) {
+                    return this.xScale(this.xScale.domain()[this.xScale.domain().length - 1]) + 30 + excludedJitter();
+                  } else {
+                    return this.xScale(this.xScale.domain()[this.xScale.domain().length - 1]) + this.xScale.bandwidth() + 30 + excludedJitter();
+                  }
+                }
+              })
+              .attr("cy", (d, i) => {
+
+                if (params.yVariable === " ") {
+                  return this.yScale(((Math.floor(d[`${params.groupBy}_i`] / grantsPerRow)) % totalRows) + 1);
+                }
+
+                if (xAccessor(d) !== null && yAccessor(d) !== null) { // If variable is 0, it becomes null when doing the log-transformation
+                  return this.yScale(yAccessor(d));
+                } else { // This handles the nulls after log-transformation
+                  excludedGrants.add(d.GrantNumber);
+                  return this.yScale(this.yScale.domain()[0]);
+                }
+              }) // y won't have groups
+              .attr("r", this.grantDotRadius)
+              .style("stroke", (d) => colorAccessor(this.uniqueGroups.indexOf(d[params.groupBy])))
+              .attr("fill", (d) => colorAccessor(this.uniqueGroups.indexOf(d[params.groupBy])))
+              .attr("fill-opacity", this.dotOpacity)
+              .style("visibility", "visible");
+
+            // Handle excluded title
+            d3.select("#excluded-title").style("display", "none");
+            if (excludedGrants.size !== 0) {
+              d3.select("#excluded-title")
+                .style("display", "block");
+
+              d3.select("#excluded-title")
+                .select("text")
+                .text(`log(0) not applicable for ${excludedGrants.size} grants`);
+            };
+
+            // Legend
+            // Remove old legend when updating
+            d3.select("#legend-title").remove();
+            d3.select("#legend-items").remove();
+
+            // Create a new group
+            const legendTitle = this.ctr
+              .append("g")
+              .attr("id", "legend-title");
+
+            legendTitle
+              .attr("transform", `translate(${this.dimensions.ctrWidth + 25}, 0)`)
+              .style("font-size", this.fontSize)
+              .style("font-weight", "bold")
+              .attr("text-anchor", "start")
+              .append("text")
+              .text(this.labels.en[params.groupBy]);
+
+            // Prepare the actual legend
+            const spacingHorizontal1 = 9;
+            const spacingHorizontal2 = spacingHorizontal1 * 2.5;
+            const spacingVertical = 20;
+
+            // Create a new group
+            const legendGroup = this.ctr
+              .append("g")
+              .attr("id", "legend-items")
+              .style("font-size", this.fontSize)
+              .attr("transform", `translate(${this.dimensions.ctrWidth + 25}, ${this.dimensions.margin.top / 2})`);
+
+            // Create a new group
+            const legendItems = legendGroup
+              .selectAll("g")
+              .data(this.uniqueGroups)
+              .join("g")
+              .attr("transform", (_, i) => `translate(0, ${i * spacingVertical})`);
+
+            // Draw the legend circles for selected legend keys (into each of the added <g> elements)
+            legendItems
+              .append("circle")
+              .attr("class", "legend-item")
+              .attr("cx", spacingHorizontal1)
+              .attr("cy", -2)
+              .attr("r", this.grantDotRadius)
+              .style("stroke", (_, i) => colorAccessor(i))
+              .attr("fill", (_, i) => colorAccessor(i))
+              .attr("fill-opacity", this.dotOpacity)
+              .on("click", (event, d) => {
+                this.removeRegressionLine();
+                const mainColor = colorAccessor(this.uniqueGroups.indexOf(d));
+                // Toggle legend circle
+                const newFill = d3.select(event.currentTarget).attr("fill") === mainColor ? "white" : mainColor;
+                d3.select(event.currentTarget).attr("fill", newFill);
+                // Toggle visibility of grants
+                const grantDots = d3.selectAll(`.cat_${d.toString().replace(/\s/g, "")}`);
+                const newVisibility = grantDots.style("visibility") === "visible" ? "hidden" : "visible";
+                grantDots.style("visibility", newVisibility);
+              });
+
+            // Write the legend keys next to the legend circles
+            legendItems
+              .append("text")
+              .attr("class", "legend-item-text")
+              .attr("x", spacingHorizontal2)
+              .attr("y", this.grantDotRadius / 2)
+              .text((d) => d);
+
+            if (this.showMeans) {
+              // Add the mean line to the legend (if needed)
+              const meanLegend = legendGroup
+                .append("g")
+                .append("line")
+                .attr("x1", spacingHorizontal1 - this.grantDotRadius * 2)
+                .attr("y1", (this.uniqueGroups.length + 1) * spacingVertical)
+                .attr("x2", this.grantDotRadius * 2)
+                .attr("y2", (this.uniqueGroups.length + 1) * spacingVertical)
+                .attr("stroke", "#333333")
+                .attr("stroke-width", "2px")
+                .style("stroke-dasharray", ("3, 3"));
+
+              // Write next to the mean line
+              legendGroup
+                .append("text")
+                .attr("x", spacingHorizontal2)
+                .attr("y", ((this.uniqueGroups.length + 1) * spacingVertical) + 5)
+                .text("Mean");
+            }
+          };
+
+          const plotMeans = async () => {
+            // Calculate mean data (this.meanData)
+            await this.getMeans();
+
+            let meanLinesGroup = this.ctr
+              .select("#mean-line");
+
+            if (meanLinesGroup.empty()) {
+              // Create a new group
+              meanLinesGroup = this.ctr
+                .append("g")
+                .attr("id", "mean-line");
+            };
+
+            meanLinesGroup
+              .selectAll("line")
+              .data(this.meanData)
+              .join(
+                (enter) =>
+                  enter
+                    .append("line")
+                    .attr("x1", (d) => this.xScale(d.category) + (0.1 * this.xScale.bandwidth()))
+                    .attr("y1", this.yScale(this.yScale.domain()[0]))
+                    .attr("x2", (d) => this.xScale(d.category) + (0.9 * this.xScale.bandwidth()))
+                    .attr("y2", this.yScale(this.yScale.domain()[0]))
+                    .attr("stroke", "#333333")
+                    .attr("stroke-width", "2px")
+                    .style("stroke-dasharray", ("3, 3")),
+                (update) => update,
+                (exit) =>
+                  exit
+                    .attr("stroke", "red")
+                    .transition()
+                    .duration(this.tranDur * 0.5)
+                    .attr("y1", this.yScale(this.yScale.domain()[0]))
+                    .attr("y2", this.yScale(this.yScale.domain()[0]))
+                    .remove()
+              )
+              .transition()
+              .duration(this.tranDur * 0.75)
+              .attr("x1", (d) => this.xScale(d.category) + (0.1 * this.xScale.bandwidth()))
+              .attr("y1", (d) => this.yScale(d.meanValue))
+              .attr("x2", (d) => this.xScale(d.category) + (0.9 * this.xScale.bandwidth()))
+              .attr("y2", (d) => this.yScale(d.meanValue));
+          };
+
+          // Actually plot the data based on the input parameters
+          let chartParams = this.checkParameters();
+          plotData(chartParams);
+
+          // Add the mean lines if wanted (and if the grouping has changed)
+          if (this.showMeans & updateMeans) {
+            plotMeans();
+          };
+
+          if (this.selectedStory === "2" || this.selectedStory == "2.1") {
+            this.plotRegressionLine();
+          } else {
+            this.removeRegressionLine();
+          }
+
+        },
+        plotRegressionLine() {
+
+          this.removeRegressionLine();
+
+          const linearRegression = ss.linearRegression(this.dataset.map((d) => {
+            return [d[this.xAccessorLabel], d[this.yAccessorLabel]]
+          }));
+
+          const linearRegressionLine = ss.linearRegressionLine(linearRegression);
+
+          const regressionPoints = () => {
+            const firstX = d3.min(this.dataset, (d) => d[this.xAccessorLabel]);
+            const lastX = d3.max(this.dataset, (d) => d[this.xAccessorLabel]);
+
+            const xCoordinates = [firstX, lastX];
+
+            return xCoordinates.map((d) => ({
+              x: d,
+              y: linearRegressionLine(d)
+            }));
+          };
+
+          const myRegressionPoints = regressionPoints();
+
+          const line = d3.line()
+            .x((d) => this.xScale(d.x))
+            .y((d) => this.yScale(d.y));
+
+          this.ctr
+            .append("path")
+            .classed("regression-line", true)
+            .datum(myRegressionPoints)
+            .attr("d", line)
+            .attr("opacity", 0)
+            .transition()
+            .duration(this.tranDur)
+            .attr("opacity", 1)
+            .attr("stroke", "black")
+            .attr("stroke-width", 0.75);
+        },
+        logTransformData(variable) {
+          if (!this.dataset[0][`log(${variable})`]) {
+            this.dataset.forEach((row) => {
+              // Handle zero value ???
+              if (row[variable] === 0) {
+                row[`log(${variable})`] = null;
+              } else {
+                row[`log(${variable})`] = Math.log(row[variable]);
+              }
+            });
+          };
+        },
+        async getMeans() {
+          const groupedData = await d3.group(this.dataset, (d) => d[this.xVariable]);
+          this.meanData = await Array.from(groupedData, ([key, value]) => {
+            return {
+              category: key,
+              meanValue: d3.mean(value, (d) => d[this.yAccessorLabel])
+            };
+          });
+        },
+        removeMeanLines() {
+          d3.select("#mean-line")
+            .transition()
+            .duration(this.tranDur * 0.25)
+            .style("opacity", 0)
+            .remove();
+        },
+        removeRegressionLine() {
+          d3.selectAll(".regression-line")
+            .transition()
+            .duration(this.tranDur * 0.25)
+            .style("opacity", 0)
+            .remove();
+        },
+        checkParameters() {
+          // Log-transform variables if needed
+          if (this.xLog) {
+            this.logTransformData(this.xVariable);
+            this.xAccessorLabel = `log(${this.xVariable})`;
+          } else {
+            this.xAccessorLabel = this.xVariable;
+          };
+          if (this.yLog) {
+            this.logTransformData(this.yVariable);
+            this.yAccessorLabel = `log(${this.yVariable})`
+          } else {
+            this.yAccessorLabel = this.yVariable;
+          };
+
+          const chartParams = {
+            xVariable: this.xVariable,
+            xAccessorLabel: this.xAccessorLabel,
+            xLog: this.xLog,
+            yVariable: this.yVariable,
+            yAccessorLabel: this.yAccessorLabel,
+            yLog: this.yLog,
+            groupBy: this.groupBy
+          };
+
+          return chartParams;
+        },
+        setChart(n) {
+          if (!n.includes(".")) {
+            this.selectedStory = n;
+          }
+
+          if (n !== "100") {
+            this.xVariable = this.chartSettings[n].xVariable;
+            this.xLog = this.chartSettings[n].xLog;
+            this.yVariable = this.chartSettings[n].yVariable;
+            this.yLog = this.chartSettings[n].yLog;
+            this.groupBy = this.chartSettings[n].groupBy;
+            this.showMeans = this.chartSettings[n].showMeans;
+
+            this.drawChart();
+          };
+        },
+      }
+    });
+
+    app.mount("#app");
+  </script>
+
+</body>
+
+</html>

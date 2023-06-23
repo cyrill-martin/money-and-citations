@@ -1,0 +1,2 @@
+# Data
+This repository contains the files of the StatDa term paper as part of my Certificate of Advanced Studies in Statistical Data Analysis & Data Visualization at the Swiss Distance University of Applied Sciences.
