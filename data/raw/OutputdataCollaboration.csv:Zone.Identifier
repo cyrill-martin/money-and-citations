@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=https://data.snf.ch/datasets
+HostUrl=https://data.snf.ch/exportcsv/OutputdataCollaboration.csv
